@@ -1,3 +1,4 @@
+const { books } = require('./books');
 const pg = require('pg');
 const client = new pg.Client(process.env.DATABASE_URL || 'postgres://localhost/profs_book_buddy');
 
@@ -27,6 +28,23 @@ app.get('/', (req, res, next)=> {
   res.send('<html><body><h1>Hello World</h1></body></html>');
 });
 
+const createBook = async(book)=> {
+  const SQL = `
+    INSERT INTO books(
+      title,
+      author,
+      description,
+      coverimage
+    )
+    VALUES(
+      $1,$2,$3,$4
+    ) RETURNING *
+  `;
+
+  const response = await client.query(SQL, [book.title, book.author, book.description, book.coverimage]);
+  return response.rows[0];
+};
+
 const init = async()=> {
   await client.connect();
   console.log('connected to database');
@@ -42,6 +60,10 @@ const init = async()=> {
   `;
   await client.query(SQL);
   console.log('tables created');
+
+  for(let i = 0; i < books.length; i++){
+   console.log(await createBook(books[i]));
+  }
 
   const port = process.env.PORT || 3000;
 
