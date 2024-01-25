@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 
-app.get('/api/books', ()=> {
+app.get('/api/books', (req, res, next)=> {
   res.send({
     books: []
   });
