@@ -1,6 +1,12 @@
 const express = require('express');
 const app = express();
 
+app.get('/api/books', ()=> {
+  res.send({
+    books: []
+  });
+});
+
 app.get('/', (req, res, next)=> {
   res.send('<html><body><h1>Hello World</h1></body></html>');
 });
