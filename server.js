@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+const cors = require('cors');
+app.use(cors());
 
 app.get('/api/books', (req, res, next)=> {
   res.send({
