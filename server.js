@@ -6,10 +6,21 @@ const app = express();
 const cors = require('cors');
 app.use(cors());
 
-app.get('/api/books', (req, res, next)=> {
-  res.send({
-    books: []
-  });
+app.get('/api/books', async(req, res, next)=> {
+  try {
+    const SQL = `
+      SELECT *
+      FROM books
+    `;
+    const response = await client.query(SQL);
+    res.send({
+      books: response.rows
+    });
+
+  }
+  catch(ex){
+    next(ex);
+  }
 });
 
 app.get('/', (req, res, next)=> {
@@ -19,6 +30,19 @@ app.get('/', (req, res, next)=> {
 const init = async()=> {
   await client.connect();
   console.log('connected to database');
+  const SQL = `
+    DROP TABLE IF EXISTS books;
+    CREATE TABLE books(
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255),
+      author VARCHAR(255),
+      description TEXT,
+      coverimage VARCHAR(255)
+    );
+  `;
+  await client.query(SQL);
+  console.log('tables created');
+
   const port = process.env.PORT || 3000;
 
   app.listen(port, ()=> console.log(`listening on port ${port}`));
