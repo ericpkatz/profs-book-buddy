@@ -99,7 +99,15 @@ app.patch('/api/books/:id', async(req, res, next)=> {
       RETURNING *
     `;
     response = await client.query(SQL, [bookId, userId]);
-    res.sendStatus(204);
+    SQL = `
+      SELECT reservations.*, books.title 
+      FROM reservations
+      JOIN books
+      ON books.id = reservations.book_id
+      WHERE user_id = $1 AND reservations.id = $2
+    `;
+    response = await client.query(SQL, [userId, response.rows[0].id]);
+    res.send({reservation: response.rows[0]});
   }
   catch(ex){
     next(ex);
@@ -160,10 +168,6 @@ app.get('/api/reservations', async(req, res, next)=> {
   catch(ex){
     next(ex);
   }
-});
-
-app.get('/', (req, res, next)=> {
-  res.send('<html><body><h1>Hello World</h1></body></html>');
 });
 
 const createBook = async(book)=> {
