@@ -66,15 +66,96 @@ app.post('/api/users/login', async(req, res, next)=> {
 
 app.get('/api/books', async(req, res, next)=> {
   try {
+
     const SQL = `
       SELECT *
       FROM books
     `;
     const response = await client.query(SQL);
-    res.send({
-      books: response.rows
-    });
+    res.send({ books: response.rows });
+  }
+  catch(ex){
+    next(ex);
+  }
+});
 
+app.patch('/api/books/:id', async(req, res, next)=> {
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const payload = jwt.verify(token, JWT);
+    let SQL = `
+      SELECT id, email
+      FROM users
+      WHERE id = $1
+    `;
+    let response = await client.query(SQL, [payload.id]);
+    const userId = response.rows[0].id;
+    const bookId = req.params.id;
+
+    SQL = `
+      INSERT INTO reservations
+      (book_id, user_id)
+      VALUES ($1, $2)
+      RETURNING *
+    `;
+    response = await client.query(SQL, [bookId, userId]);
+    res.sendStatus(204);
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
+app.delete('/api/reservations/:id', async(req, res, next)=> {
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const payload = jwt.verify(token, JWT);
+    let SQL = `
+      SELECT id, email
+      FROM users
+      WHERE id = $1
+    `;
+    let response = await client.query(SQL, [payload.id]);
+    const userId = response.rows[0].id;
+    const reservationId = req.params.id;
+
+    SQL = `
+      DELETE FROM
+      reservations
+      WHERE user_id=$1 AND id=$2
+    `;
+    response = await client.query(SQL, [userId, reservationId]);
+    res.sendStatus(204);
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
+app.get('/api/reservations', async(req, res, next)=> {
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const payload = jwt.verify(token, JWT);
+    let SQL = `
+      SELECT id, email
+      FROM users
+      WHERE id = $1
+    `;
+    let response = await client.query(SQL, [payload.id]);
+    const userId = response.rows[0].id;
+    const reservationId = req.params.id;
+
+    SQL = `
+      SELECT reservations.*, books.title 
+      FROM reservations
+      JOIN books
+      ON books.id = reservations.book_id
+      WHERE user_id = $1
+    `;
+    response = await client.query(SQL, [userId]);
+    res.send({
+      reservation: response.rows
+    });
   }
   catch(ex){
     next(ex);
@@ -103,6 +184,7 @@ const createBook = async(book)=> {
 };
 
 app.use((err, req, res, next)=> {
+  console.log(err);
   res.status(err.status || 500).send({ error: err.message || err});
 });
 
@@ -110,6 +192,7 @@ const init = async()=> {
   await client.connect();
   console.log('connected to database');
   const SQL = `
+    DROP TABLE IF EXISTS reservations;
     DROP TABLE IF EXISTS books;
     DROP TABLE IF EXISTS users;
 
@@ -124,6 +207,11 @@ const init = async()=> {
       author VARCHAR(255),
       description TEXT,
       coverimage VARCHAR(255)
+    );
+    CREATE TABLE reservations(
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) NOT NULL,
+      book_id INTEGER REFERENCES books(id) NOT NULL
     );
   `;
 
